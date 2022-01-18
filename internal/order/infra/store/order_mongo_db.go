@@ -118,6 +118,7 @@ func fromOrder(o *order.Order) *orderBson {
 		CustomerID: o.CustomerId(),
 		OrderItems: orderItemBsons,
 		Version:    o.Version(),
+		CreatedTime: o.CreatedTime(),
 	}
 }
 

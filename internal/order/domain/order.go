@@ -64,6 +64,8 @@ func (o *Order) Version() string { return o.version.String() }
 
 func (o *Order) CustomerId() string { return o.customerID }
 
+func (o *Order) CreatedTime() time.Time { return o.createdTime }
+
 func (o *Order) OrderItems() *[]OrderItem {
 	return &o.orderItems
 }
