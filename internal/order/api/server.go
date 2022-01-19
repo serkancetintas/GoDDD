@@ -26,16 +26,19 @@ type Server struct {
 	cfg                    Config
 	echo                   *echo.Echo
 	orderService 			application.OrderService
+	orderHandler			OrderHandler
 }
 
 func NewServer(cfg Config,
 	e *echo.Echo,
 	o application.OrderService,
+	h OrderHandler,
 	) *Server {
 	server := Server{
 		cfg:                    cfg,
 		echo:                   e,
 		orderService: 			o,
+		orderHandler: 			h,
 	}
 
 	server.useHealth()

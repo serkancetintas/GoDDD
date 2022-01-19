@@ -58,13 +58,14 @@ func buildServer(w io.Writer) *api.Server {
 	repository := store.NewOrderMongoRepository(mongoStore)
 
 	service := application.NewOrderService(repository)
+	handler := api.NewOrderHandler(service)
 
 	e := echo.New()
 	e.Logger.SetOutput(w)
 
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
-	return api.NewServer(cfg, e, service)
+	return api.NewServer(cfg, e, service, handler)
 }
 
 func readConfig(cfg *api.Config) {

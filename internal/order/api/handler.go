@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go-practice/internal/common/aggregate"
@@ -10,15 +11,15 @@ import (
 	"net/http"
 )
 
-type OrderAPI struct {
+type OrderHandler struct {
 	OrderService application.OrderService
 }
 
-func NewOrderAPI(o application.OrderService) OrderAPI {
-	return OrderAPI{o}
+func NewOrderHandler(o application.OrderService) OrderHandler {
+	return OrderHandler{o}
 }
 
-func (o OrderAPI) getOrders(c echo.Context)  error {
+func (o OrderHandler) getOrders(c echo.Context)  error {
 	return handleR(c, http.StatusOK, func(ctx context.Context) (interface{}, error) {
 		orders, err := o.OrderService.All(ctx)
 
@@ -26,7 +27,7 @@ func (o OrderAPI) getOrders(c echo.Context)  error {
 	})
 }
 
-func (o OrderAPI) getOrder(c echo.Context) error {
+func (o OrderHandler) getOrder(c echo.Context) error {
 	id := c.Param("id")
 
 	return handleR(c, http.StatusOK, func(ctx context.Context) (interface{}, error) {
@@ -36,25 +37,28 @@ func (o OrderAPI) getOrder(c echo.Context) error {
 	})
 }
 
-func (o OrderAPI) create(c echo.Context) error {
-	orderDTO := new(OrderDTO)
-	if err := c.Bind(orderDTO); err != nil {
+func (o OrderHandler) create(c echo.Context) error {
+	var orderDTO OrderDTO
+	if err := c.Bind(&orderDTO); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
+
 	var orderItems []order.OrderItem
+	fmt.Println("order dto", orderDTO)
 	for _, oi :=  range orderDTO.OrderItems {
 		orderItems = append(orderItems,
 			order.OrderItem{ ProductID: oi.ProductID,
-				             ProductName: oi.ProductName,
-							 ItemCount: oi.ItemCount,
-							})
+				ProductName: oi.ProductName,
+				ItemCount: oi.ItemCount,
+				Price: oi.Price,
+			})
 	}
 
 	ordr, err := order.NewOrder(order.ID(orderDTO.ID),
-								orderItems,
-								order.Submitted,
-								aggregate.NewVersion(),
-								orderDTO.CustomerID)
+		orderItems,
+		order.Submitted,
+		aggregate.NewVersion(),
+		orderDTO.CustomerID)
 
 	if err != nil {
 		return errors.Wrap(err, "create order")
