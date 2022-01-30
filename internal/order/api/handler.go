@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 	"go-practice/internal/common/aggregate"
+	"go-practice/internal/common/rabbit"
 	"go-practice/internal/order/application"
 	order "go-practice/internal/order/domain"
 	"net/http"
@@ -13,13 +13,14 @@ import (
 
 type OrderHandler struct {
 	OrderService application.OrderService
+	EventBus     *rabbit.Client
 }
 
-func NewOrderHandler(o application.OrderService) OrderHandler {
-	return OrderHandler{o}
+func NewOrderHandler(o application.OrderService, r *rabbit.Client) OrderHandler {
+	return OrderHandler{o, r}
 }
 
-func (o OrderHandler) getOrders(c echo.Context)  error {
+func (o OrderHandler) getOrders(c echo.Context) error {
 	return handleR(c, http.StatusOK, func(ctx context.Context) (interface{}, error) {
 		orders, err := o.OrderService.All(ctx)
 
@@ -44,13 +45,12 @@ func (o OrderHandler) create(c echo.Context) error {
 	}
 
 	var orderItems []order.OrderItem
-	fmt.Println("order dto", orderDTO)
-	for _, oi :=  range orderDTO.OrderItems {
+	for _, oi := range orderDTO.OrderItems {
 		orderItems = append(orderItems,
-			order.OrderItem{ ProductID: oi.ProductID,
+			order.OrderItem{ProductID: oi.ProductID,
 				ProductName: oi.ProductName,
-				ItemCount: oi.ItemCount,
-				Price: oi.Price,
+				ItemCount:   oi.ItemCount,
+				Price:       oi.Price,
 			})
 	}
 
@@ -68,6 +68,5 @@ func (o OrderHandler) create(c echo.Context) error {
 		http.StatusCreated,
 		func(ctx context.Context) error {
 			return o.OrderService.Create(ctx, ordr)
-		})
+		}, ordr.Root, o.EventBus)
 }
-

@@ -7,7 +7,9 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/spf13/viper"
 	echoSwagger "github.com/swaggo/echo-swagger"
+	"go-practice/internal/common/config"
 	"go-practice/internal/common/must"
+	"go-practice/internal/common/rabbit"
 	"go-practice/internal/common/shutdown"
 	"go-practice/internal/order/api"
 	"go-practice/internal/order/application"
@@ -20,7 +22,16 @@ import (
 )
 
 func main() {
-	cleanup, err := run(os.Stdout)
+	configurationManager := config.NewConfigurationManager()
+	rabbitConfig := configurationManager.GetRabbitConfig()
+	queuesConfig := configurationManager.GetQueuesConfig()
+
+	rabbitClient := rabbit.NewRabbitClient(rabbitConfig, queuesConfig)
+	defer rabbitClient.CloseConnection()
+
+	rabbitClient.DeclareExchangeQueueBindings()
+
+	cleanup, err := run(os.Stdout, rabbitClient)
 	defer cleanup()
 
 	if err != nil {
@@ -31,8 +42,8 @@ func main() {
 	shutdown.Gracefully()
 }
 
-func run(w io.Writer) (func(), error) {
-	server := buildServer(w)
+func run(w io.Writer, r *rabbit.Client) (func(), error) {
+	server := buildServer(w, r)
 
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {
@@ -50,7 +61,7 @@ func run(w io.Writer) (func(), error) {
 	}, nil
 }
 
-func buildServer(w io.Writer) *api.Server {
+func buildServer(w io.Writer, r *rabbit.Client) *api.Server {
 	var cfg api.Config
 	readConfig(&cfg)
 
@@ -58,7 +69,7 @@ func buildServer(w io.Writer) *api.Server {
 	repository := store.NewOrderMongoRepository(mongoStore)
 
 	service := application.NewOrderService(repository)
-	handler := api.NewOrderHandler(service)
+	handler := api.NewOrderHandler(service, r)
 
 	e := echo.New()
 	e.Logger.SetOutput(w)

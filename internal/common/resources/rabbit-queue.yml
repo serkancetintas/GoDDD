@@ -1,0 +1,11 @@
+queue:
+  order:
+    orderCreated:
+      channelCount: 1
+      prefetchCount: 10
+      exchange: "order.events"
+      exchangeType: "topic"
+      routingKey: "orderCreated"
+      queue: "order.OrderCreated"
+
+

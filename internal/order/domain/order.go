@@ -11,29 +11,29 @@ type Order struct {
 	aggregate.Root
 	id          ID
 	orderItems  []OrderItem
-	customerID	string
+	customerID  string
 	createdTime time.Time
 	status      Status
 	version     aggregate.Version
 }
 
 func NewOrder(id ID, orderItems []OrderItem,
-		status Status, version aggregate.Version,
-		customerID string) (*Order, error) {
+	status Status, version aggregate.Version,
+	customerID string) (*Order, error) {
 	o := Order{
-		id: id,
-		orderItems: orderItems,
+		id:          id,
+		orderItems:  orderItems,
 		createdTime: time.Now(),
-		version: version,
-		status: status,
-		customerID: customerID,
+		version:     version,
+		status:      status,
+		customerID:  customerID,
 	}
 
 	if err := valid(&o); err != nil {
 		return nil, err
 	}
 
-	o.AddEvent(CreatedEvent{id: string(id)})
+	o.AddEvent(OrderCreated{id: string(id), orderItems: orderItems, customerId: customerID})
 
 	return &o, nil
 }
@@ -48,7 +48,7 @@ func (o *Order) Cancel() {
 	o.AddEvent(CancelledEvent{id: string(o.id)})
 }
 
-func (o *Order) Status() Status {  return o.status }
+func (o *Order) Status() Status { return o.status }
 
 func valid(o *Order) error {
 	if o.id == "" || o.orderItems == nil || o.customerID == "" {

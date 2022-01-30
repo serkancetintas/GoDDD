@@ -1,8 +1,10 @@
 package order
 
 type (
-	CreatedEvent struct {
-		id string
+	OrderCreated struct {
+		id         string
+		orderItems []OrderItem
+		customerId string
 	}
 	PaidEvent struct {
 		id string
