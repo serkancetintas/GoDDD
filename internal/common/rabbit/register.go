@@ -8,7 +8,7 @@ func (c *Client) getRegisteredQueue() []config.QueueConfig {
 	if rq != nil {
 		return rq
 	}
-	rq = append(rq, c.queuesConfig.Order.OrderCreated)
+	rq = append(rq, c.QueuesConfig.Order.OrderCreated)
 
 	return rq
 }

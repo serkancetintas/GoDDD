@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/iancoleman/strcase"
 	"github.com/streadway/amqp"
 	"go-practice/internal/common/config"
 	"log"
@@ -12,9 +13,9 @@ import (
 )
 
 type Client struct {
-	connection   *amqp.Connection
-	queuesConfig config.QueuesConfig
-	channel      *amqp.Channel
+	Connection   *amqp.Connection
+	QueuesConfig config.QueuesConfig
+	Channel      *amqp.Channel
 }
 
 func NewRabbitClient(rabbitConfig config.RabbitConfig, queuesConfig config.QueuesConfig) *Client {
@@ -26,9 +27,9 @@ func NewRabbitClient(rabbitConfig config.RabbitConfig, queuesConfig config.Queue
 	}
 
 	return &Client{
-		connection:   c,
-		queuesConfig: queuesConfig,
-		channel:      channel,
+		Connection:   c,
+		QueuesConfig: queuesConfig,
+		Channel:      channel,
 	}
 }
 
@@ -36,11 +37,11 @@ func (c *Client) DeclareExchangeQueueBindings() {
 	configs := c.getRegisteredQueue()
 
 	for _, queueConfig := range configs {
-		declareExchange(c.channel, queueConfig)
-		declareQueue(c.channel, queueConfig)
-		declareDeadLetterQueue(c.channel, queueConfig)
-		bindQueue(c.channel, queueConfig)
-		err := c.channel.Qos(queueConfig.PrefetchCount, 0, false)
+		declareExchange(c.Channel, queueConfig)
+		declareQueue(c.Channel, queueConfig)
+		declareDeadLetterQueue(c.Channel, queueConfig)
+		bindQueue(c.Channel, queueConfig)
+		err := c.Channel.Qos(queueConfig.PrefetchCount, 0, false)
 		if err != nil {
 			log.Panicf("PrefetchCount could not defined. Terminating. Error details: %s", err.Error())
 		}
@@ -48,7 +49,7 @@ func (c *Client) DeclareExchangeQueueBindings() {
 }
 
 func (c *Client) CreateChannel(prefetchCount int) *amqp.Channel {
-	channel, err := c.connection.Channel()
+	channel, err := c.Connection.Channel()
 	if err != nil {
 		channel.Close()
 		log.Panicf("Channel could not created. Terminating. Error details: %s", err.Error())
@@ -122,17 +123,21 @@ func (c *Client) Publish(m config.Message) error {
 		ReplyTo:       m.ReplyTo,
 	}
 
-	exchangeFirstPart := strings.Split(m.Queue, ".")[0]
-	exchangeName := fmt.Sprintf("%s.%s", exchangeFirstPart, "events")
+	fmt.Println("publish data:", m.Body.Data)
 
-	if err := c.channel.Publish(exchangeName, m.Queue, false, false, p); err != nil {
+	queueStrings := strings.Split(m.Queue, ".")
+	exchangeName := fmt.Sprintf("%s.%s", queueStrings[0], "events")
+	routingKey := strcase.ToLowerCamel(queueStrings[1])
+	fmt.Println("publish method exchange name:" + exchangeName + " routing key:" + routingKey)
+
+	if err := c.Channel.Publish(exchangeName, routingKey, false, false, p); err != nil {
 		return fmt.Errorf("Error in Publishing: %s", err)
 	}
 	return nil
 }
 
 func (c *Client) CloseConnection() {
-	c.connection.Close()
+	c.Connection.Close()
 }
 
 func getConnectionUrl(config config.RabbitConfig) string {
